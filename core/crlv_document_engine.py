@@ -438,6 +438,7 @@ if __name__ == "__main__":
 
     print("=" * 60)
     print("DOCUMENT INTELLIGENCE ENGINE")
+    print("Desenvolvido por Nadison Roberto | NR TECH | © 2026")
     print("=" * 60)
 
     caminho = input(
