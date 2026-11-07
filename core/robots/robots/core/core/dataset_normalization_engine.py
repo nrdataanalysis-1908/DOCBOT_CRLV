@@ -234,24 +234,23 @@ def tratar_arquivo(arq):
         engine="openpyxl"
     )
 
-    df.columns = [
+    df.columns = [limpar_nome_coluna(column) for column in df.columns]
 
-        limpar_nome_coluna(c)
-
-        for c in df.columns
-
-    ]
+    duplicates = df.columns[df.columns.duplicated()].unique().tolist()
+    if duplicates:
+        raise ValueError(
+            "Colunas duplicadas após normalização: "
+            + ", ".join(str(column) for column in duplicates)
+        )
 
     if COL_TITULO in df.columns:
+        df.rename(columns={COL_TITULO: COL_PLACA}, inplace=True)
 
-        df.rename(
-
-            columns={
-                COL_TITULO: COL_PLACA
-            },
-
-            inplace=True
-
+    duplicates = df.columns[df.columns.duplicated()].unique().tolist()
+    if duplicates:
+        raise ValueError(
+            "Colunas duplicadas após mapeamento: "
+            + ", ".join(str(column) for column in duplicates)
         )
 
     if COL_PLACA not in df.columns:
