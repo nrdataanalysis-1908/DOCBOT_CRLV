@@ -182,12 +182,13 @@ def limpar_nome_coluna(valor):
 # ============================================================
 
 def normalizar_data(serie):
-
+    """Normalize Brazilian and ISO date strings without locale ambiguity."""
     dt = pd.to_datetime(
         serie,
-        errors="coerce"
+        errors="coerce",
+        format="mixed",
+        dayfirst=True,
     )
-
     return dt.dt.strftime("%d/%m/%Y")
 
 # ============================================================
@@ -195,16 +196,15 @@ def normalizar_data(serie):
 # ============================================================
 
 def listar_xlsx():
-
-    return [
-
-        f
-
-        for f in INPUT_DIR.glob("*.xlsx")
-
-        if not f.name.startswith("~$")
-
-    ]
+    if not INPUT_DIR.is_dir():
+        return []
+    return sorted(
+        (
+            path for path in INPUT_DIR.glob("*.xlsx")
+            if not path.name.startswith("~$")
+        ),
+        key=lambda path: (path.stat().st_mtime_ns, path.name.casefold()),
+    )
 
 # ============================================================
 # ARQUIVO MAIS RECENTE
@@ -212,9 +212,11 @@ def listar_xlsx():
 
 def escolher_mais_recente(arquivos):
 
+    if not arquivos:
+        raise ValueError("Nenhum arquivo XLSX disponível para seleção.")
     return max(
         arquivos,
-        key=lambda f: f.stat().st_mtime
+        key=lambda path: (path.stat().st_mtime_ns, path.name.casefold()),
     )
 
 # ============================================================
