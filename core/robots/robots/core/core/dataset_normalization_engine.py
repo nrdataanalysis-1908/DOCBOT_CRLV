@@ -337,22 +337,27 @@ def tratar_arquivo(arq):
 
     df = df[fixas + extras]
 
-    caminho_saida = (
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    caminho_saida = OUTPUT_DIR / f"NORMALIZADO_{arq.name}"
+    import os
+    import tempfile
 
-        OUTPUT_DIR
-        / f"NORMALIZADO_{arq.name}"
-
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{caminho_saida.stem}.",
+        suffix=".tmp.xlsx",
+        dir=OUTPUT_DIR,
     )
-
-    df.to_excel(
-
-        caminho_saida,
-
-        index=False,
-
-        engine="openpyxl"
-
-    )
+    os.close(descriptor)
+    temporary_path = Path(temporary_name)
+    try:
+        df.to_excel(
+            temporary_path,
+            index=False,
+            engine="openpyxl",
+        )
+        os.replace(temporary_path, caminho_saida)
+    finally:
+        temporary_path.unlink(missing_ok=True)
 
     print(
         "✅ Dataset normalizado."
