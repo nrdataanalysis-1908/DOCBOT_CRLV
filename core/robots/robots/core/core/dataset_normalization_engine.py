@@ -178,14 +178,22 @@ def limpar_nome_coluna(valor):
 # ============================================================
 
 def normalizar_data(serie):
-    """Normalize Brazilian and ISO date strings without locale ambiguity."""
-    dt = pd.to_datetime(
-        serie,
+    """Normalize Brazilian day-first dates and ISO year-first dates."""
+    values = serie.astype("string").str.strip()
+    iso_mask = values.str.match(r"^\d{4}-\d{2}-\d{2}(?:$|[ T])", na=False)
+    iso_dates = pd.to_datetime(
+        values.where(iso_mask),
+        errors="coerce",
+        format="mixed",
+        yearfirst=True,
+    )
+    day_first_dates = pd.to_datetime(
+        values.where(~iso_mask),
         errors="coerce",
         format="mixed",
         dayfirst=True,
     )
-    return dt.dt.strftime("%d/%m/%Y")
+    return iso_dates.fillna(day_first_dates).dt.strftime("%d/%m/%Y")
 
 # ============================================================
 # LISTAGEM DE EXCEL
@@ -240,7 +248,7 @@ def tratar_arquivo(arq):
         )
 
     if COL_TITULO in df.columns:
-        df.rename(columns={COL_TITULO: COL_PLACA}, inplace=True)
+        df = df.rename(columns={COL_TITULO: COL_PLACA})
 
     duplicates = df.columns[df.columns.duplicated()].unique().tolist()
     if duplicates:
