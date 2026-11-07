@@ -25,10 +25,6 @@ INPUT_DIR = BASE_DIR.parent / "input"
 
 OUTPUT_DIR = BASE_DIR.parent / "output"
 
-INPUT_DIR.mkdir(exist_ok=True)
-
-OUTPUT_DIR.mkdir(exist_ok=True)
-
 APENAS_MAIS_RECENTE = True
 
 # ============================================================
@@ -371,6 +367,7 @@ def tratar_arquivo(arq):
 
 def main():
 
+    INPUT_DIR.mkdir(parents=True, exist_ok=True)
     arquivos = listar_xlsx()
 
     if not arquivos:
