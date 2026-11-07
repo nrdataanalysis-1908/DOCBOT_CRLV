@@ -25,10 +25,6 @@ INPUT_DIR = BASE_DIR.parent / "input"
 
 OUTPUT_DIR = BASE_DIR.parent / "output"
 
-INPUT_DIR.mkdir(exist_ok=True)
-
-OUTPUT_DIR.mkdir(exist_ok=True)
-
 APENAS_MAIS_RECENTE = True
 
 # ============================================================
@@ -182,29 +178,37 @@ def limpar_nome_coluna(valor):
 # ============================================================
 
 def normalizar_data(serie):
-
-    dt = pd.to_datetime(
-        serie,
-        errors="coerce"
+    """Normalize Brazilian day-first dates and ISO year-first dates."""
+    values = serie.astype("string").str.strip()
+    iso_mask = values.str.match(r"^\d{4}-\d{2}-\d{2}(?:$|[ T])", na=False)
+    iso_dates = pd.to_datetime(
+        values.where(iso_mask),
+        errors="coerce",
+        format="mixed",
+        yearfirst=True,
     )
-
-    return dt.dt.strftime("%d/%m/%Y")
+    day_first_dates = pd.to_datetime(
+        values.where(~iso_mask),
+        errors="coerce",
+        format="mixed",
+        dayfirst=True,
+    )
+    return iso_dates.fillna(day_first_dates).dt.strftime("%d/%m/%Y")
 
 # ============================================================
 # LISTAGEM DE EXCEL
 # ============================================================
 
 def listar_xlsx():
-
-    return [
-
-        f
-
-        for f in INPUT_DIR.glob("*.xlsx")
-
-        if not f.name.startswith("~$")
-
-    ]
+    if not INPUT_DIR.is_dir():
+        return []
+    return sorted(
+        (
+            path for path in INPUT_DIR.glob("*.xlsx")
+            if not path.name.startswith("~$")
+        ),
+        key=lambda path: (path.stat().st_mtime_ns, path.name.casefold()),
+    )
 
 # ============================================================
 # ARQUIVO MAIS RECENTE
@@ -212,9 +216,11 @@ def listar_xlsx():
 
 def escolher_mais_recente(arquivos):
 
+    if not arquivos:
+        raise ValueError("Nenhum arquivo XLSX disponível para seleção.")
     return max(
         arquivos,
-        key=lambda f: f.stat().st_mtime
+        key=lambda path: (path.stat().st_mtime_ns, path.name.casefold()),
     )
 
 # ============================================================
@@ -232,24 +238,23 @@ def tratar_arquivo(arq):
         engine="openpyxl"
     )
 
-    df.columns = [
+    df.columns = [limpar_nome_coluna(column) for column in df.columns]
 
-        limpar_nome_coluna(c)
-
-        for c in df.columns
-
-    ]
+    duplicates = df.columns[df.columns.duplicated()].unique().tolist()
+    if duplicates:
+        raise ValueError(
+            "Colunas duplicadas após normalização: "
+            + ", ".join(str(column) for column in duplicates)
+        )
 
     if COL_TITULO in df.columns:
+        df = df.rename(columns={COL_TITULO: COL_PLACA})
 
-        df.rename(
-
-            columns={
-                COL_TITULO: COL_PLACA
-            },
-
-            inplace=True
-
+    duplicates = df.columns[df.columns.duplicated()].unique().tolist()
+    if duplicates:
+        raise ValueError(
+            "Colunas duplicadas após mapeamento: "
+            + ", ".join(str(column) for column in duplicates)
         )
 
     if COL_PLACA not in df.columns:
@@ -336,22 +341,27 @@ def tratar_arquivo(arq):
 
     df = df[fixas + extras]
 
-    caminho_saida = (
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    caminho_saida = OUTPUT_DIR / f"NORMALIZADO_{arq.name}"
+    import os
+    import tempfile
 
-        OUTPUT_DIR
-        / f"NORMALIZADO_{arq.name}"
-
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{caminho_saida.stem}.",
+        suffix=".tmp.xlsx",
+        dir=OUTPUT_DIR,
     )
-
-    df.to_excel(
-
-        caminho_saida,
-
-        index=False,
-
-        engine="openpyxl"
-
-    )
+    os.close(descriptor)
+    temporary_path = Path(temporary_name)
+    try:
+        df.to_excel(
+            temporary_path,
+            index=False,
+            engine="openpyxl",
+        )
+        os.replace(temporary_path, caminho_saida)
+    finally:
+        temporary_path.unlink(missing_ok=True)
 
     print(
         "✅ Dataset normalizado."
@@ -365,6 +375,7 @@ def tratar_arquivo(arq):
 
 def main():
 
+    INPUT_DIR.mkdir(parents=True, exist_ok=True)
     arquivos = listar_xlsx()
 
     if not arquivos:
