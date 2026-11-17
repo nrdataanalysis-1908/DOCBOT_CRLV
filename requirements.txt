@@ -1,0 +1,9 @@
+# Core document and spreadsheet processing
+PyPDF2>=3.0
+pandas>=2.0,<4
+openpyxl>=3.1
+
+# Desktop automation modules (Windows only)
+pyautogui>=0.9.54; platform_system == "Windows"
+pyperclip>=1.8.2; platform_system == "Windows"
+keyboard>=0.13.5; platform_system == "Windows"

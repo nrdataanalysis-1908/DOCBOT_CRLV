@@ -1,66 +1,79 @@
 # DOCBOT_CRLV
 
-Ferramenta de processamento em lote de documentos CRLV, concebida para ler arquivos de uma pasta selecionada e consolidar os dados extraídos em uma planilha Excel na própria pasta de origem.
+Conjunto de módulos Python para processamento documental veicular, normalização de planilhas e automação assistida de consultas. O repositório já contém código executável e testes; ainda não constitui uma aplicação integrada com instalador, interface única ou fluxo ponta a ponta validado em ambiente real.
 
-> Estado do repositório: especificação inicial. A presença deste documento não significa que o leitor, a extração de campos ou a exportação estejam implementados.
+## Estado atual
 
-## Objetivo operacional
+> Estado: em desenvolvimento; os módulos ainda não formam uma aplicação integrada.
 
-Reduzir o trabalho manual de conferência de CRLVs, permitindo selecionar uma pasta com múltiplos documentos, executar a leitura em lote e obter um arquivo consolidado para revisão.
+Os componentes são independentes e possuem maturidades distintas:
 
-## Fluxo esperado
-
-1. O usuário inicia a aplicação.
-2. Seleciona a pasta que contém os CRLVs.
-3. A aplicação identifica os arquivos compatíveis e processa cada documento individualmente.
-4. Os campos reconhecidos são normalizados e associados ao arquivo de origem.
-5. Falhas de leitura são registradas por documento, sem interromper desnecessariamente o lote.
-6. Um arquivo Excel consolidado é salvo na mesma pasta selecionada.
-
-## Requisitos funcionais
-
-| ID | Requisito | Critério de aceite |
+| Módulo | Implementação disponível | Limite conhecido |
 |---|---|---|
-| FR-01 | Seleção de pasta | O usuário escolhe a pasta pela interface do sistema |
-| FR-02 | Varredura em lote | Todos os arquivos suportados são considerados uma única vez |
-| FR-03 | Rastreabilidade | Cada linha mantém o nome do arquivo de origem |
-| FR-04 | Extração | Campos reconhecidos são armazenados sem inventar valores ausentes |
-| FR-05 | Tratamento de falhas | Documento ilegível gera status/erro próprio e não elimina os demais resultados |
-| FR-06 | Exportação | Uma planilha Excel consolidada é gravada na pasta selecionada |
-| FR-07 | Reexecução | A planilha gerada não deve ser tratada como documento de entrada |
+| Motor CRLV | Leitura de PDF com PyPDF2, extração de texto e identificação de campos veiculares | A qualidade depende do texto efetivamente presente no PDF; não há garantia de OCR para documentos digitalizados como imagem |
+| Normalização de datasets | Leitura de XLSX, limpeza de cabeçalhos, normalização de datas brasileiras/ISO, mapeamento de UF e organização de colunas | O processamento é orientado a arquivos e não é exposto por uma API pública |
+| Geração de links documentais | Leitura de planilha, identificação de placa/arquivo e composição de URLs documentais | Requer uma base documental fornecida pelo operador |
+| Aquisição documental | Automação assistida de navegador/desktop, leitura de planilhas, tentativas de download e processamento temporário de PDFs | Depende de sessão gráfica, coordenadas/configuração local e comportamento do sistema externo |
+| Consulta de restrições | Automação assistida de consultas veiculares em lote, com status e salvamento parcial | Depende do ambiente desktop e do serviço consultado; não há integração de API pública documentada |
 
-## Qualidade e segurança
+## Estrutura do código
 
-- Não preencher campos que não tenham sido efetivamente identificados no documento.
-- Diferenciar campo ausente, campo ilegível e campo validado.
-- Preservar o vínculo entre resultado e arquivo de origem.
-- Evitar sobrescrever documentos de entrada.
-- Tratar PDFs inválidos, protegidos ou corrompidos sem interromper todo o lote.
-- Não registrar conteúdo documental sensível em logs desnecessários.
-- Utilizar documentos sintéticos ou anonimizados em testes.
+- `core/crlv_document_engine.py`: motor de interpretação de PDFs CRLV.
+- `core/robots/robots/core/core/dataset_normalization_engine.py`: normalização e publicação de planilhas.
+- `core/robots/robots/core/document_link_generation_engine.py`: geração de links documentais a partir de planilhas.
+- `core/robots/robots/vehicle_document_acquisition_engine.py`: aquisição documental assistida.
+- `core/robots/vehicle_restriction_query_engine.py`: consulta veicular assistida.
 
-## Estrutura sugerida para a planilha
+Os scripts não devem ser tratados como um único pipeline operacional. Cada módulo precisa ser configurado e validado conforme seu ambiente de execução.
 
-A estrutura definitiva deve refletir os campos efetivamente suportados pelo extrator. Como base operacional, recomenda-se incluir:
+## Qualidade e testes
 
-- arquivo_origem;
-- status_processamento;
-- campos extraídos;
-- observacoes_validacao;
-- mensagem_erro, quando aplicável.
+A suíte automatizada atual cobre principalmente o módulo de normalização:
 
-Os nomes e tipos dos campos do CRLV devem ser definidos em um contrato versionado antes da implementação do extrator.
+- importação do normalizador sem efeitos colaterais de criação de diretórios;
+- preservação do arquivo de saída anterior quando a gravação de uma nova planilha falha;
+- normalização de datas brasileiras e datas ISO;
+- validação do contrato de colunas e do esquema de saída.
 
-## Plano de validação
+Execute os testes com:
 
-- [ ] Um PDF válido com campos legíveis.
-- [ ] Um PDF com campos ausentes.
-- [ ] Um PDF ilegível ou corrompido.
-- [ ] Pasta vazia e pasta sem PDFs.
-- [ ] Lote com documentos válidos e inválidos misturados.
-- [ ] Reexecução sem processar a planilha de saída como entrada.
-- [ ] Verificação de que o Excel foi salvo no diretório selecionado.
+```powershell
+python -m pip install -r requirements-test.txt
+python -m pytest -q
+```
 
-## Próximo passo
+O GitHub Actions executa a suíte em Python 3.11 para eventos de push na `main`, pull requests direcionados à `main` e execução manual.
 
-Inspecionar a implementação do leitor, definir o contrato dos campos extraídos e transformar os critérios acima em testes automatizados.
+Os testes automatizados não substituem a validação ponta a ponta dos módulos que controlam navegador, teclado, mouse, downloads ou serviços externos.
+
+## Dependências e ambiente
+
+O arquivo `requirements.txt` declara as dependências de runtime dos módulos de processamento documental e planilhas. As bibliotecas de automação desktop (`pyautogui`, `pyperclip` e `keyboard`) usam marcadores de ambiente para instalação somente no Windows.
+
+O arquivo `requirements-test.txt` reutiliza o manifesto de runtime e acrescenta o pytest. Instale o ambiente de execução com `python -m pip install -r requirements.txt` e o ambiente de testes com `python -m pip install -r requirements-test.txt`.
+
+As versões são declaradas por limites mínimos, não por lockfile; a reprodução bit a bit do ambiente ainda requer uma estratégia futura de travamento de versões.
+
+Os fluxos de automação desktop devem ser executados em ambiente Windows interativo, com as permissões e aplicações externas exigidas por cada módulo.
+
+## Segurança e privacidade
+
+- Utilize documentos sintéticos ou anonimizados em testes.
+- Não versionar CRLVs reais, planilhas de clientes, placas associadas a pessoas, chaves de acesso ou arquivos temporários de consultas.
+- Não considerar dados extraídos como validados sem aplicar regras de consistência e revisão.
+- Tratar resultados de serviços externos como dados sujeitos a conferência.
+- Validar caminhos e destinos de saída antes de processar documentos em lote.
+
+## Próximas etapas técnicas
+
+1. Consolidar dependências de runtime por módulo e documentar versões suportadas.
+2. Definir contratos versionados para os campos extraídos e normalizados.
+3. Isolar efeitos colaterais de inicialização e padronizar pontos de entrada.
+4. Criar fixtures sintéticas de PDFs e planilhas para ampliar testes de regressão.
+5. Introduzir testes de integração com adaptadores externos simulados.
+6. Separar automação de interface da lógica de domínio para reduzir dependência de coordenadas e estado visual.
+7. Definir um fluxo de execução integrado somente depois que os contratos de cada módulo estiverem estáveis.
+
+## Licença e uso
+
+Consulte os avisos de autoria presentes nos módulos e a situação jurídica do repositório antes de redistribuir ou utilizar comercialmente qualquer componente. A existência de código no GitHub não concede, por si só, direitos de reutilização.

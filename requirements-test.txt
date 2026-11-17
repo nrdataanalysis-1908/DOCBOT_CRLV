@@ -1,4 +1,2 @@
-pandas>=2.0,<4
-openpyxl>=3.1
-PyPDF2>=3.0
+-r requirements.txt
 pytest>=8.0
