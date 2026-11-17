@@ -4,7 +4,7 @@ Conjunto de módulos Python para processamento documental veicular, normalizaç�
 
 ## Estado atual
 
-<badge>Em desenvolvimento</badge>
+> Estado: em desenvolvimento; os módulos ainda não formam uma aplicação integrada.
 
 Os componentes são independentes e possuem maturidades distintas:
 
