@@ -48,9 +48,11 @@ Os testes automatizados não substituem a validação ponta a ponta dos módulos
 
 ## Dependências e ambiente
 
-O arquivo `requirements-test.txt` declara as dependências utilizadas pela suíte de testes: pandas, openpyxl, PyPDF2 e pytest.
+O arquivo `requirements.txt` declara as dependências de runtime dos módulos de processamento documental e planilhas. As bibliotecas de automação desktop (`pyautogui`, `pyperclip` e `keyboard`) usam marcadores de ambiente para instalação somente no Windows.
 
-Os módulos de automação também importam bibliotecas específicas, como `pyautogui`, `pyperclip` e `keyboard`. Ainda não existe um manifesto consolidado de dependências de runtime que permita instalar todos os módulos de forma reproduzível. Essa definição deve preceder a distribuição de um pacote único.
+O arquivo `requirements-test.txt` reutiliza o manifesto de runtime e acrescenta o pytest. Instale o ambiente de execução com `python -m pip install -r requirements.txt` e o ambiente de testes com `python -m pip install -r requirements-test.txt`.
+
+As versões são declaradas por limites mínimos, não por lockfile; a reprodução bit a bit do ambiente ainda requer uma estratégia futura de travamento de versões.
 
 Os fluxos de automação desktop devem ser executados em ambiente Windows interativo, com as permissões e aplicações externas exigidas por cada módulo.
 
